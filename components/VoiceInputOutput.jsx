@@ -1,9 +1,17 @@
-'use client';
-
-import React, { useState, useEffect } from "react";
-import Script from 'next/script';
-import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
-import { FaMicrophone, FaSpinner, FaCheck, FaStop, FaRocket } from "react-icons/fa";
+import Script from "next/script";
+import SpeechRecognition, {
+  useSpeechRecognition,
+} from "react-speech-recognition";
+import {
+  FaMicrophone,
+  FaSpinner,
+  FaCheck,
+  FaStop,
+  FaRocket,
+} from "react-icons/fa";
+import { Experience } from "./Experience";
+import { useState, useEffect } from "react";
+import { Canvas } from "@react-three/fiber";
 
 const VoiceInputOutput = () => {
   const { transcript, resetTranscript } = useSpeechRecognition();
@@ -20,14 +28,16 @@ const VoiceInputOutput = () => {
 
   useEffect(() => {
     if (!SpeechRecognition.browserSupportsSpeechRecognition()) {
-      alert("Browser Anda tidak mendukung pengenalan suara. Gunakan Chrome atau Edge.");
+      alert(
+        "Browser Anda tidak mendukung pengenalan suara. Gunakan Chrome atau Edge."
+      );
     }
   }, []);
 
   const handleStartListening = () => {
     setIsListening(true);
     playTingSound(); // Play sound when starting listening
-    SpeechRecognition.startListening({ continuous: true, language: 'id-ID' });
+    SpeechRecognition.startListening({ continuous: true, language: "id-ID" });
   };
 
   const handleStopListening = () => {
@@ -57,13 +67,17 @@ const VoiceInputOutput = () => {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/assistant/prompt_view", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, user_id: "alex" }),
-      });
+      const response = await fetch(
+        "http://192.168.88.60:41000/api/assistant/prompt_view",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt, user_id: "alex" }),
+        }
+      );
 
-      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
 
       const data = await response.json();
       const cleanedResponse = data.response.replace(/[^\w\s.,?'"\-()!]/g, "");
@@ -78,8 +92,9 @@ const VoiceInputOutput = () => {
   const handleVoiceInteraction = async () => {
     setIsProcessing(true);
     handleStopListening();
-
+    await handleAskAPI("test 10 kata");
     if (transcript) {
+      console.log("Transcript:", transcript);
       await handleAskAPI(transcript);
       resetTranscript();
     } else {
@@ -117,11 +132,24 @@ const VoiceInputOutput = () => {
       alignItems: "center",
       justifyContent: "center",
       transition: "all 0.3s ease",
+      margin: "auto",
     },
     ready: { backgroundColor: "#4caf50", transform: "scale(1)" },
-    listening: { backgroundColor: "#2196f3", transform: "scale(1.1)", animation: "pulse 1s infinite" },
-    processing: { backgroundColor: "#ff9800", transform: "scale(1.2)", animation: "spin 1s linear infinite" },
-    speaking: { backgroundColor: "#ff5722", transform: "scale(1.1)", animation: "pulse 1s infinite" }, // New style when speaking
+    listening: {
+      backgroundColor: "#2196f3",
+      transform: "scale(1.1)",
+      animation: "pulse 1s infinite",
+    },
+    processing: {
+      backgroundColor: "#ff9800",
+      transform: "scale(1.2)",
+      animation: "spin 1s linear infinite",
+    },
+    speaking: {
+      backgroundColor: "#ff5722",
+      transform: "scale(1.1)",
+      animation: "pulse 1s infinite",
+    }, // New style when speaking
     keyframes: `
       @keyframes pulse {
         0% { transform: scale(1.1); }
@@ -143,29 +171,47 @@ const VoiceInputOutput = () => {
     ? buttonStyles.processing
     : buttonStyles.ready;
 
-  const currentIcon = isSpeaking
-    ? <FaStop /> // Stop icon when speaking
-    : isListening
-    ? <FaMicrophone />
-    : isProcessing
-    ? <FaSpinner />
-    : <FaRocket />;
+  const currentIcon = isSpeaking ? (
+    <FaStop /> // Stop icon when speaking
+  ) : isListening ? (
+    <FaMicrophone />
+  ) : isProcessing ? (
+    <FaSpinner />
+  ) : (
+    <FaRocket />
+  );
 
   return (
-    <div style={{ textAlign: "center", marginTop: "20px" }}>
-      <Script src="https://code.responsivevoice.org/responsivevoice.js" strategy="beforeInteractive" />
-      <style>{buttonStyles.keyframes}</style>
+    <>
+      {!isSpeaking && (
+        <div style={{ textAlign: "center", marginTop: "20px" }}>
+          <Script
+            src="https://code.responsivevoice.org/responsivevoice.js"
+            strategy="beforeInteractive"
+          />
+          <style>{buttonStyles.keyframes}</style>
 
-      <button
-        onClick={toggleListening}
-        disabled={isProcessing}
-        style={{ ...buttonStyles.base, ...currentStyle }}
-        aria-pressed={isListening}
-        aria-busy={isProcessing}
-      >
-        {currentIcon}
-      </button>
-    </div>
+          <button
+            onClick={toggleListening}
+            disabled={isProcessing}
+            style={{ ...buttonStyles.base, ...currentStyle }}
+            aria-pressed={isListening}
+            aria-busy={isProcessing}
+          >
+            {currentIcon}
+          </button>
+        </div>
+      )}
+
+      <div style={{ height: "100vh" }}>
+        {isSpeaking && (
+          <Canvas shadows camera={{ position: [0, 0, 8], fov: 42 }}>
+            <color attach="background" args={["#ececec"]} />
+            <Experience isSpeaking={isSpeaking} />
+          </Canvas>
+        )}
+      </div>
+    </>
   );
 };
 
